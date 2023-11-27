@@ -7,6 +7,8 @@
 using namespace std;
 using namespace std::chrono;
 
+#define DIV 1000000000.0
+
 class time_data
 {
 public:
@@ -17,18 +19,23 @@ public:
     // Duration
     nanoseconds duration_ns;
 
-    // Convert nanoseconds to seconds
+    // Test name
+    string name;
+
+    // ns to s
     inline static double ns_to_s(nanoseconds ns)
     {
-        return ns.count() / 1000000000.0;
+        return ns.count() / DIV;
     }
 
+    // Overload the << operator
     friend ostream &operator<<(ostream &os, const time_data &data)
     {
+        os << "Task name: " << data.name << endl;
         os << "Start: " << data.start_ns.count() << "ns" << endl;
         os << "End: " << data.end_ns.count() << "ns" << endl;
-        os << "Duration: " << data.duration_ns.count() << "ns" << endl;
-        os << "Duration: " << ns_to_s(data.duration_ns) << "s" << endl;
+        os << "Duration (ns): " << data.duration_ns.count() << endl;
+        os << "Duration (s): " << time_data::ns_to_s(data.duration_ns) << endl;
         return os;
     }
 };
@@ -39,7 +46,7 @@ class Simplebench
 public:
     // Bench a function and return the time data
     template <typename F, typename... Args>
-    inline static time_data bench(int iterations, F func, Args... args)
+    inline static time_data bench(int iterations, string run_name, F func, Args... args)
     {
         // Get the start time
         auto start = chrono::high_resolution_clock::now();
@@ -59,6 +66,7 @@ public:
         data.start_ns = start.time_since_epoch();
         data.end_ns = end.time_since_epoch();
         data.duration_ns = duration;
+        data.name = run_name;
 
         sb_header();
         cout << data << endl;
@@ -72,7 +80,7 @@ public:
         cout << "----------------------------------------" << endl;
         for (int i = 0; i < N; i++)
         {
-            cout << "Run " << i << endl;
+            cout << "Run " << i + 1 << endl;
             cout << data[i] << endl;
         }
         // Find the fastest run
@@ -85,7 +93,7 @@ public:
             }
         }
         // Print the fastest run
-        cout << "Fastest run: " << fastest << " at " << time_data::ns_to_s(data[fastest].duration_ns) << endl;
+        cout << "Fastest run: " << fastest + 1 << " at " << time_data::ns_to_s(data[fastest].duration_ns) << endl;
         cout << "----------------------------------------" << endl;
     }
 
