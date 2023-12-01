@@ -18,6 +18,8 @@ public:
     nanoseconds end_ns;
     // Duration
     nanoseconds duration_ns;
+    // Average call time
+    nanoseconds avg_call_time_ns;
 
     // Test name
     string name;
@@ -36,6 +38,7 @@ public:
         os << "End: " << data.end_ns.count() << "ns" << endl;
         os << "Duration (ns): " << data.duration_ns.count() << endl;
         os << "Duration (s): " << time_data::ns_to_s(data.duration_ns) << endl;
+        os << "Average function call time (ns): " << data.avg_call_time_ns.count() << endl;
         return os;
     }
 };
@@ -46,17 +49,26 @@ class Simplebench
 public:
     // Bench a function and return the time data
     template <typename F, typename... Args>
-    inline static time_data bench(int iterations, string run_name, F func, Args... args)
+    inline static time_data bench(size_t iterations, string run_name, F func, Args... args)
     {
         // Get the start time
-        auto start = chrono::high_resolution_clock::now();
+        auto start = chrono::steady_clock::now();
+
+        // Array for the call times
+        nanoseconds total_call_time = 0ns;
+
         // Run the function
-        for (int i = 0; i < iterations; i++)
+        for (size_t i = 0; i < iterations; i++)
         {
+            auto func_call = chrono::steady_clock::now();
             func(args...);
+            auto func_end = chrono::steady_clock::now();
+            auto func_duration = chrono::duration_cast<chrono::nanoseconds>(func_end - func_call);
+            total_call_time += func_duration;
         }
+        total_call_time /= iterations;
         // Get the end time
-        auto end = chrono::high_resolution_clock::now();
+        auto end = chrono::steady_clock::now();
         // Calculate the duration
         auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
         // Print the duration
@@ -67,6 +79,7 @@ public:
         data.end_ns = end.time_since_epoch();
         data.duration_ns = duration;
         data.name = run_name;
+        data.avg_call_time_ns = total_call_time;
 
         sb_header();
         cout << data << endl;
@@ -85,15 +98,21 @@ public:
         }
         // Find the fastest run
         int fastest = 0;
+        int fastest_call = 0;
         for (int i = 0; i < N; i++)
         {
             if (data[i].duration_ns < data[fastest].duration_ns)
             {
                 fastest = i;
             }
+            if (data[i].avg_call_time_ns < data[fastest_call].avg_call_time_ns)
+            {
+                fastest_call = i;
+            }
         }
         // Print the fastest run
         cout << "Fastest run: " << fastest + 1 << " at " << time_data::ns_to_s(data[fastest].duration_ns) << endl;
+        cout << "Fastest function call: " << fastest_call + 1 << " at " << time_data::ns_to_s(data[fastest_call].avg_call_time_ns) << endl;
         cout << "----------------------------------------" << endl;
     }
 
